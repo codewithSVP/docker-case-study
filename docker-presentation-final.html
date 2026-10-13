@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docker Case Study — Presentation</title>
+<style>
+/* === VIEWPORT BASE === */
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #0B1020; }
+.deck-viewport { position: fixed; inset: 0; overflow: hidden; background: #0B1020; }
+.deck-stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden;
+  transform-origin: 0 0; background: #fff; }
+.slide { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden;
+  display: block; visibility: hidden; opacity: 0; pointer-events: none; }
+.slide.active { visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; }
+
+/* === COBALT TERMINAL THEME === */
+:root {
+  --paper: #F2EFE9;
+  --paper-2: #E8E4DB;
+  --ink: #1D63ED;
+  --ink-soft: #558DF0;
+  --grid: rgba(29, 99, 237, 0.07);
+  --body-ink: #2C3242;
+  --edge: 110px;
+}
+.slide { background: var(--paper); }
+
+/* Graph paper background */
+.slide::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Hairline rails */
+.rule { position: absolute; left: var(--edge); right: var(--edge); height: 1.5px;
+  background: var(--ink); opacity: 0.8; }
+.rule.top { top: 80px; }
+.rule.bottom { bottom: 90px; }
+
+/* Header & Footer */
+.head { position: absolute; top: 40px; left: var(--edge); right: var(--edge);
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  font-family: 'DM Mono', ui-monospace, monospace; font-size: 19px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--ink); font-weight: 500; }
+.head > :nth-child(2) { text-align: center; }
+.head > :last-child { text-align: right; }
+.head .sec { color: var(--ink-soft); }
+
+.foot { position: absolute; bottom: 48px; left: var(--edge); right: var(--edge);
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: 'DM Mono', ui-monospace, monospace; font-size: 18px; letter-spacing: 0.12em;
+  color: var(--ink); }
+.foot b { color: var(--ink-soft); font-weight: 600; font-size: 20px; }
+.foot-team { display: flex; gap: 18px; color: var(--body-ink); opacity: 0.85; }
+
+/* Typography */
+h1 { font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 124px;
+  line-height: 1.05; letter-spacing: -0.02em; color: var(--ink); margin: 0; }
+h1 em { font-style: italic; color: var(--ink-soft); }
+
+h2 { font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 86px;
+  line-height: 1.1; letter-spacing: -0.015em; color: var(--ink); margin: 0; }
+h2 em { font-style: italic; color: var(--ink-soft); }
+
+h3 { font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 48px;
+  line-height: 1.15; color: var(--ink); margin: 0 0 18px 0; }
+
+.eyebrow { font-family: 'DM Mono', ui-monospace, monospace; font-size: 23px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--ink-soft); margin: 0 0 24px 0; }
+.lede { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 33px; line-height: 1.45;
+  color: var(--body-ink); margin: 0; font-weight: 400; }
+.body { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 29px; line-height: 1.5;
+  color: var(--body-ink); margin: 0; }
+.body-sm { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 26px; line-height: 1.5;
+  color: var(--body-ink); }
+.mono { font-family: 'DM Mono', ui-monospace, monospace; }
+
+/* Layout container */
+.layout {
+  position: absolute; left: var(--edge); right: var(--edge);
+  top: 130px; bottom: 140px;
+  display: flex; flex-direction: column;
+}
+
+/* Title slide */
+.title-content { margin-top: 120px; max-width: 1400px; }
+.title-content .lede { margin-top: 45px; max-width: 32ch; }
+
+/* Two-column comparison */
+.two-col { display: grid; grid-template-columns: 1fr auto 1fr; gap: 70px;
+  align-items: stretch; margin-top: 45px; flex: 1; max-height: 390px; }
+.col { display: flex; flex-direction: column; }
+.col-head { font-family: 'DM Mono', ui-monospace, monospace; font-size: 21px; letter-spacing: 0.2em;
+  text-transform: uppercase; margin: 0 0 24px 0; font-weight: 500; color: var(--body-ink); }
+.col-head.hl { color: var(--ink); }
+.card {
+  border: 1.5px solid rgba(44,50,66,0.25); padding: 38px 42px; background: var(--paper-2);
+  flex: 1; border-radius: 4px; display: flex; flex-direction: column; justify-content: center;
+}
+.card.hl { border-color: var(--ink); background: rgba(29, 99, 237, 0.04); }
+.card ul { margin: 0; padding-left: 20px; }
+.card li { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 27px; line-height: 1.5;
+  color: var(--body-ink); margin-bottom: 24px; padding-left: 10px; }
+.card li:last-child { margin-bottom: 0; }
+.card li::marker { color: var(--ink); }
+.arrow-box { display: flex; align-items: center; justify-content: center; }
+.arrow-circle {
+  width: 90px; height: 90px; border: 1.5px solid var(--ink); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', ui-monospace, monospace; font-size: 40px; color: var(--ink);
+  background: var(--paper); transform: translateY(20px);
+}
+
+/* Workflow chain */
+.chain { display: flex; align-items: stretch; gap: 0; margin-top: 70px; flex: 1; max-height: 380px; }
+.node {
+  flex: 1; border: 1.5px solid var(--ink); background: var(--paper-2);
+  padding: 40px 32px; display: flex; flex-direction: column; justify-content: center; 
+  border-radius: 4px;
+}
+.node.solid { background: var(--ink); }
+.node .step { font-family: 'DM Mono', ui-monospace, monospace; font-size: 20px; letter-spacing: 0.2em;
+  color: var(--ink-soft); margin-bottom: 24px; }
+.node .name { font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 42px;
+  line-height: 1.1; color: var(--ink); margin-bottom: 16px; }
+.node .desc { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 24px; line-height: 1.45;
+  color: var(--body-ink); }
+.node.solid .step { color: var(--paper); opacity: 0.8; }
+.node.solid .name { color: var(--paper); }
+.node.solid .desc { color: var(--paper); opacity: 0.9; }
+.link-arr {
+  width: 65px; flex: none; display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', ui-monospace, monospace; font-size: 38px; color: var(--ink);
+}
+
+/* Three-box stack */
+.stack { display: flex; align-items: stretch; margin-top: 80px; flex: 1; max-height: 400px; gap: 10px; }
+.box {
+  flex: 1; border: 1.5px solid var(--ink); background: var(--paper-2);
+  padding: 45px; display: flex; flex-direction: column; justify-content: center; border-radius: 4px;
+}
+.box.solid { background: var(--ink); }
+.box .role {
+  font-family: 'DM Mono', ui-monospace, monospace; font-size: 20px; letter-spacing: 0.2em;
+  color: var(--ink-soft); text-transform: uppercase; margin-bottom: 24px;
+}
+.box .what {
+  font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 46px;
+  color: var(--ink); margin-bottom: 18px; line-height: 1.1;
+}
+.box .why {
+  font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 25px; line-height: 1.45;
+  color: var(--body-ink);
+}
+.box.solid .role { color: var(--paper); opacity: 0.8; }
+.box.solid .what { color: var(--paper); }
+.box.solid .why  { color: var(--paper); opacity: 0.9; }
+.arr { width: 60px; flex: none; display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', ui-monospace, monospace; font-size: 44px; color: var(--ink); }
+
+/* Fact callout */
+.fact-box { width: 480px; border-left: 3px solid var(--ink); padding-left: 36px; flex: none; }
+.fact-box .big {
+  font-family: 'Newsreader', Georgia, serif; font-weight: 600; font-size: 110px; line-height: 1;
+  color: var(--ink); letter-spacing: -0.02em; margin-bottom: 14px;
+}
+.fact-box .cap { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 26px; line-height: 1.45;
+  color: var(--body-ink); margin: 0; }
+
+/* Content grid (bullets + fact) */
+.split { display: flex; gap: 80px; margin-top: 50px; }
+.split-main { flex: 1; }
+.split-side { width: 420px; flex: none; }
+.bullet-list { margin: 0; padding-left: 28px; }
+.bullet-list li { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-size: 28px;
+  line-height: 1.5; color: var(--body-ink); margin-bottom: 24px; }
+.bullet-list li:last-child { margin-bottom: 0; }
+.bullet-list li::marker { color: var(--ink); }
+
+/* Navigation hint */
+.hint { position: fixed; bottom: 12px; right: 18px; z-index: 2000;
+  font-family: 'DM Mono', ui-monospace, monospace; font-size: 13px; letter-spacing: 0.15em;
+  color: #7b8fa3; }
+
+/* Animations */
+@keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.slide.active .layout { animation: slideUp 0.6s 0.05s both cubic-bezier(0.2,0.8,0.2,1); }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,600&family=Hanken+Grotesk:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="deck-viewport">
+  <div class="deck-stage" id="stage">
+
+    <!-- ═══ SLIDE 1: TITLE ═══ -->
+    <section class="slide active">
+      <div class="head">
+        <span>CS330</span><span class="sec">SOFTWARE ENGINEERING CASE STUDY</span>
+        <span>Navrachana University</span>
+      </div>
+      <div class="rule top"></div>
+      <div class="layout">
+        <div class="title-content">
+          <p class="eyebrow">Docker Case Study</p>
+          <h1>Shipping <em>software</em>, not environments.</h1>
+          <p class="lede">How Docker replaced "it works on my machine" with one
+            reproducible artifact that travels from a laptop to production unchanged.</p>
+        </div>
+      </div>
+      <div class="rule bottom"></div>
+      <div class="foot">
+        <span class="foot-team"><span>Shivansh Patel (24001245)</span><span>·</span><span>Rishi Kachhadia (24000713)</span><span>·</span><span>Priyanshi Joshi (24000830)</span></span>
+        <span>B.Tech CSE - TY</span>
+      </div>
+    </section>
+
+    <!-- ═══ SLIDE 2: THE PROBLEM ═══ -->
+    <section class="slide">
+      <div class="head"><span>CS330</span><span class="sec">01 · The Problem</span><span>02</span></div>
+      <div class="rule top"></div>
+      <div class="layout">
+        <h2>"It works on <em>my</em> machine."</h2>
+        <p class="lede" style="max-width: 60ch; margin-top: 30px;">For thirty years the most expensive class of bug was not logic — it was environment. The same code, on a second machine, simply stopped working.</p>
+        <div class="two-col">
+          <div class="col">
+            <p class="col-head">Without Docker</p>
+            <div class="card">
+              <ul>
+                <li>Manual installs per machine — versions drift within a week</li>
+                <li>A dependency upgrade breaks one app, silently heals another</li>
+                <li>Setup takes a new hire days; nobody documents the quirks</li>
+                <li>Production is rebuilt from scripts nobody has ever tested</li>
+              </ul>
+            </div>
+          </div>
+          <div class="arrow-box"><div class="arrow-circle">→</div></div>
+          <div class="col">
+            <p class="col-head hl">With Docker</p>
+            <div class="card hl">
+              <ul>
+                <li>One image carries the OS, libraries, and app together</li>
+                <li>Dependencies are isolated per container — no collisions</li>
+                <li>Onboarding is <span class="mono">docker compose up</span></li>
+                <li>What CI tests is byte-for-byte what production runs</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rule bottom"></div>
+      <div class="foot">
+        <span class="foot-team"><span>Shivansh Patel (24001245)</span><span>·</span><span>Rishi Kachhadia (24000713)</span><span>·</span><span>Priyanshi Joshi (24000830)</span></span>
+        <span>B.Tech CSE - TY<span style="opacity:0.5; margin:0 10px;">·</span>Page <b>02</b></span>
+      </div>
+    </section>
+
+    <!-- ═══ SLIDE 3: HOW IT WORKS ═══ -->
+    <section class="slide">
+      <div class="head"><span>CS330</span><span class="sec">02 · How It Works</span><span>03</span></div>
+      <div class="rule top"></div>
+      <div class="layout">
+        <h2>One artifact, <em>five steps</em>.</h2>
+        <p class="lede" style="max-width: 58ch; margin-top: 30px;">The whole pipeline is a single file describing the environment — everything else is built from it.</p>
+        <div class="chain">
+          <div class="node">
+            <span class="step">01</span><span class="name">Code</span>
+            <span class="desc">Your application, written once.</span>
+          </div>
+          <div class="link-arr">→</div>
+          <div class="node">
+            <span class="step">02</span><span class="name">Dockerfile</span>
+            <span class="desc">A text file: base image, deps, commands.</span>
+          </div>
+          <div class="link-arr">→</div>
+          <div class="node solid">
+            <span class="step">03</span><span class="name">Image</span>
+            <span class="desc">An immutable, layered snapshot.</span>
+          </div>
+          <div class="link-arr">→</div>
+          <div class="node">
+            <span class="step">04</span><span class="name">Registry</span>
+            <span class="desc">The image is pushed and versioned.</span>
+          </div>
+          <div class="link-arr">→</div>
+          <div class="node">
+            <span class="step">05</span><span class="name">Container</span>
+            <span class="desc">An instance runs — anywhere, identically.</span>
+          </div>
+        </div>
+      </div>
+      <div class="rule bottom"></div>
+      <div class="foot">
+        <span class="foot-team"><span>Shivansh Patel (24001245)</span><span>·</span><span>Rishi Kachhadia (24000713)</span><span>·</span><span>Priyanshi Joshi (24000830)</span></span>
+        <span>B.Tech CSE - TY<span style="opacity:0.5; margin:0 10px;">·</span>Page <b>03</b></span>
+      </div>
+    </section>
+
+    <!-- ═══ SLIDE 4: LIVE DEMO OVERVIEW ═══ -->
+    <section class="slide">
+      <div class="head"><span>CS330</span><span class="sec">03 · Live Demo</span><span>04</span></div>
+      <div class="rule top"></div>
+      <div class="layout">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 60px;">
+          <h2 style="flex: 1; max-width: 18ch;">Three containers, <em>one command</em>.</h2>
+          <div class="fact-box">
+            <div class="big">1</div>
+            <div class="cap">command brings up the web server, the API, and the database — networked, ordered, and persistent.</div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="box">
+            <div class="role">web · Nginx</div><div class="what">Frontend</div>
+            <div class="why">Serves the page and proxies <span class="mono">/api</span> to the API.</div>
+          </div>
+          <div class="arr">→</div>
+          <div class="box solid">
+            <div class="role">api · Node.js</div><div class="what">REST API</div>
+            <div class="why">Talks to the database over the internal Compose network.</div>
+          </div>
+          <div class="arr">→</div>
+          <div class="box">
+            <div class="role">db · Postgres</div><div class="what">Database</div>
+            <div class="why">Rows survive <span class="mono">compose down</span> via a named volume.</div>
+          </div>
+        </div>
+      </div>
+      <div class="rule bottom"></div>
+      <div class="foot">
+        <span class="foot-team"><span>Shivansh Patel (24001245)</span><span>·</span><span>Rishi Kachhadia (24000713)</span><span>·</span><span>Priyanshi Joshi (24000830)</span></span>
+        <span>B.Tech CSE - TY<span style="opacity:0.5; margin:0 10px;">·</span>Page <b>04</b></span>
+      </div>
+    </section>
+
+    <!-- ═══ SLIDE 5: WHO CREATED DOCKER (60/40 SPLIT) ═══ -->
+    <section class="slide">
+      <div class="head"><span>CS330</span><span class="sec">04 · Origin Story</span><span>05</span></div>
+      <div class="rule top"></div>
+      <div class="layout">
+        <h2>Who created <em>Docker</em>?</h2>
+        <div style="display: flex; gap: 80px; margin-top: 50px;">
+          <div style="flex: 0 0 60%; display: flex; flex-direction: column;">
+            <p class="body" style="margin-top: 0;">Docker began as an internal project at <strong>dotCloud</strong>, a Platform-as-a-Service company founded by Solomon Hykes in 2010.</p>
+            <ul class="bullet-list" style="margin-top: 40px;">
+              <li>In <strong>March 2013</strong>, dotCloud open-sourced Docker at PyCon</li>
+              <li>By standardizing application environments, it gained industry-wide adoption rapidly</li>
+              <li>dotCloud eventually rebranded as <strong>Docker Inc.</strong></li>
+              <li>Docker drastically simplified application deployment, paving the way for DevOps and cloud-native development</li>
+            </ul>
+          </div>
+          <div style="flex: 0 0 calc(40% - 80px); display: flex; flex-direction: column; justify-content: center;">
+            <div style="border-left: 3px solid var(--ink); padding-left: 32px;">
+              <p class="body" style="margin-bottom: 26px; font-weight: 500; font-size: 31px;">Why It Mattered</p>
+              <p class="body-sm">Before Docker, consistent deployment across development, staging, and production was a manual, error-prone process.</p>
+              <p class="body-sm" style="margin-top: 28px;">Docker gave engineers a single artifact that worked <em>identically everywhere</em>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rule bottom"></div>
+      <div class="foot">
+        <span class="foot-team"><span>Shivansh Patel (24001245)</span><span>·</span><span>Rishi Kachhadia (24000713)</span><span>·</span><span>Priyanshi Joshi (24000830)</span></span>
+        <span>B.Tech CSE - TY<span style="opacity:0.5; margin:0 10px;">·</span>Page <b>05</b></span>
+      </div>
+    </section>
+
+    <!-- ═══ SLIDE 6: WHY DOCKER WAS CREATED (BOXED) ═══ -->
+    <section class="slide">
+      <div class="head"><span>CS330</span><span class="sec">05 · Why Docker Was Created</span><span>06</span></div>
+      <div class="rule top"></div>
+      <div class="layout">
+        <h2>Why was Docker <em>created</em>?</h2>
+        <p class="lede" style="margin-top: 25px; max-width: 70ch;">Docker addressed key challenges in traditional software engineering that had plagued deployment for decades.</p>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; margin-top: 40px;">
+          <div style="background: var(--paper-2); padding: 40px 45px; border-radius: 6px;">
+            <h3 style="margin-bottom: 16px; font-size: 36px;">"Works on my machine"</h3>
+            <p class="body-sm" style="font-size: 24px; line-height: 1.5;">Software ran in development but failed in staging/production due to missing dependencies, library mismatches, or OS level anomalies.</p>
+          </div>
+          <div style="background: var(--paper-2); padding: 40px 45px; border-radius: 6px;">
+            <h3 style="margin-bottom: 16px; font-size: 36px;">Configuration Drift</h3>
+            <p class="body-sm" style="font-size: 24px; line-height: 1.5;">Servers diverged over time as patches and updates were applied manually, making environments unpredictable and irreproducible.</p>
+          </div>
+          <div style="background: var(--paper-2); padding: 40px 45px; border-radius: 6px;">
+            <h3 style="margin-bottom: 16px; font-size: 36px;">Dependency Conflicts</h3>
+            <p class="body-sm" style="font-size: 24px; line-height: 1.5;">Running multiple applications on the same host often caused version collisions (e.g., App A uses Python 2, App B uses Python 3).</p>
+          </div>
+          <div style="background: var(--paper-2); padding: 40px 45px; border-radius: 6px;">
+            <h3 style="margin-bottom: 16px; font-size: 36px;">Complex Deployments</h3>
+            <p class="body-sm" style="font-size: 24px; line-height: 1.5;">Deploying apps required fragile scripts, runbooks, and manual intervention, leading to high downtime and frequent failures.</p>
+          </div>
+        </div>
+      </div>
+      <div class="rule bottom"></div>
+      <div class="foot">
+        <span class="foot-team"><span>Shivansh Patel (24001245)</span><span>·</span><span>Rishi Kachhadia (24000713)</span><span>·</span><span>Priyanshi Joshi (24000830)</span></span>
+        <span>B.Tech CSE - TY<span style="opacity:0.5; margin:0 10px;">·</span>Page <b>06</b></span>
+      </div>
+    </section>
+
+    <!-- ═══ SLIDE 7: WHY ENGINEERS USE DOCKER (BOXED) ═══ -->
+    <section class="slide">
+      <div class="head"><span>CS330</span><span class="sec">06 · Why Engineers Use Docker</span><span>07</span></div>
+      <div class="rule top"></div>
+      <div class="layout">
+        <h2>Why software engineers <em>use Docker</em>.</h2>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; margin-top: 50px;">
+          <div style="background: var(--paper-2); padding: 40px 45px; border-radius: 6px;">
+            <h3 style="margin-bottom: 16px; font-size: 36px;">Reproducibility</h3>
+            <p class="body-sm" style="font-size: 24px; line-height: 1.5;">Maintains an identical and consistent environment across development, testing, staging, and production without drift.</p>
+          </div>
+          <div style="background: var(--paper-2); padding: 40px 45px; border-radius: 6px;">
+            <h3 style="margin-bottom: 16px; font-size: 36px;">Dependency Isolation</h3>
+            <p class="body-sm" style="font-size: 24px; line-height: 1.5;">Packages all underlying code, libraries, and binaries into an isolated object to avoid conflicts between project dependencies.</p>
+          </div>
+          <div style="background: var(--paper-2); padding: 40px 45px; border-radius: 6px;">
+            <h3 style="margin-bottom: 16px; font-size: 36px;">Portability</h3>
+            <p class="body-sm" style="font-size: 24px; line-height: 1.5;">Build it once, run it anywhere. Containers run seamlessly on any machine that supports and has the Docker Engine installed.</p>
+          </div>
+          <div style="background: var(--paper-2); padding: 40px 45px; border-radius: 6px;">
+            <h3 style="margin-bottom: 16px; font-size: 36px;">Faster Turnaround</h3>
+            <p class="body-sm" style="font-size: 24px; line-height: 1.5;">Spin up and tear down environments quickly in seconds. No more heavy, slow virtual machines demanding minutes to boot.</p>
+          </div>
+        </div>
+      </div>
+      <div class="rule bottom"></div>
+      <div class="foot">
+        <span class="foot-team"><span>Shivansh Patel (24001245)</span><span>·</span><span>Rishi Kachhadia (24000713)</span><span>·</span><span>Priyanshi Joshi (24000830)</span></span>
+        <span>B.Tech CSE - TY<span style="opacity:0.5; margin:0 10px;">·</span>Page <b>07</b></span>
+      </div>
+    </section>
+
+    <!-- ═══ SLIDE 8: DOCKER VS VMs ═══ -->
+    <section class="slide">
+      <div class="head"><span>CS330</span><span class="sec">07 · Docker vs Virtual Machines</span><span>08</span></div>
+      <div class="rule top"></div>
+      <div class="layout">
+        <h2>Docker vs <em>Virtual Machines</em>.</h2>
+        <p class="lede" style="margin-top: 30px; max-width: 65ch;">Containers and VMs both provide isolation, but they work fundamentally differently.</p>
+        <div class="two-col">
+          <div class="col">
+            <p class="col-head">Virtual Machines</p>
+            <div class="card">
+              <ul>
+                <li>Full OS per VM — entire kernel, libraries, and binaries</li>
+                <li>Heavy: GBs of disk, minutes to boot</li>
+                <li>Strong isolation via hypervisor</li>
+                <li>Best for: running different OSes, legacy apps, strict security boundaries</li>
+              </ul>
+            </div>
+          </div>
+          <div class="arrow-box"><div class="arrow-circle">vs</div></div>
+          <div class="col">
+            <p class="col-head hl">Docker Containers</p>
+            <div class="card hl">
+              <ul>
+                <li>Shares host OS kernel — only app + dependencies packaged</li>
+                <li>Lightweight: MBs of disk, milliseconds to start</li>
+                <li>Process-level isolation via namespaces/cgroups</li>
+                <li>Best for: microservices, CI/CD, cloud-native apps, rapid iteration</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rule bottom"></div>
+      <div class="foot">
+        <span class="foot-team"><span>Shivansh Patel (24001245)</span><span>·</span><span>Rishi Kachhadia (24000713)</span><span>·</span><span>Priyanshi Joshi (24000830)</span></span>
+        <span>B.Tech CSE - TY<span style="opacity:0.5; margin:0 10px;">·</span>Page <b>08</b></span>
+      </div>
+    </section>
+
+    <!-- ═══ SLIDE 9: DOCKER COMPONENTS ═══ -->
+    <section class="slide">
+      <div class="head"><span>CS330</span><span class="sec">08 · Docker Components</span><span>09</span></div>
+      <div class="rule top"></div>
+      <div class="layout">
+        <h2>Docker <em>components</em>.</h2>
+        <div class="split" style="margin-top: 50px;">
+          <div class="split-main">
+            <h3>Images</h3>
+            <p class="body-sm">Read-only templates built from Dockerfiles. Images are <strong>immutable</strong> and composed of <strong>layers</strong> — each instruction in the Dockerfile creates a new layer, enabling efficient caching and reuse.</p>
+            
+            <h3 style="margin-top: 40px;">Containers</h3>
+            <p class="body-sm">A running instance of an image. Containers are <strong>isolated</strong> from each other and the host using Linux namespaces and cgroups. Each container has its own filesystem, network interface, and process tree.</p>
+            
+            <h3 style="margin-top: 40px;">Dockerfile</h3>
+            <p class="body-sm">A text file containing a series of instructions to build an image. Key commands: <span class="mono">FROM</span> (base image), <span class="mono">RUN</span> (execute command), <span class="mono">COPY</span> (add files), <span class="mono">CMD</span> (default command).</p>
+          </div>
+          <div class="split-side">
+            <div style="border: 1.5px solid var(--ink); padding: 35px; background: var(--paper-2); border-radius: 4px;">
+              <p class="mono" style="font-size: 18px; color: var(--body-ink); line-height: 1.7;">
+                <span style="color: var(--ink);"># Dockerfile example</span><br>
+                FROM node:22-alpine<br>
+                WORKDIR /app<br>
+                COPY package*.json ./<br>
+                RUN npm ci --omit=dev<br>
+                COPY . .<br>
+                CMD ["node", "server.js"]
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rule bottom"></div>
+      <div class="foot">
+        <span class="foot-team"><span>Shivansh Patel (24001245)</span><span>·</span><span>Rishi Kachhadia (24000713)</span><span>·</span><span>Priyanshi Joshi (24000830)</span></span>
+        <span>B.Tech CSE - TY<span style="opacity:0.5; margin:0 10px;">·</span>Page <b>09</b></span>
+      </div>
+    </section>
+
+    <!-- ═══ SLIDE 10: DOCKER COMPOSE ═══ -->
+    <section class="slide">
+      <div class="head"><span>CS330</span><span class="sec">09 · Docker Compose</span><span>10</span></div>
+      <div class="rule top"></div>
+      <div class="layout">
+        <h2>Docker <em>Compose</em>.</h2>
+        <p class="lede" style="margin-top: 30px; max-width: 70ch;">Define and run multi-container applications with a single YAML file. Compose handles networking, dependencies, and orchestration automatically.</p>
+        <div class="split" style="margin-top: 50px;">
+          <div class="split-main">
+            <h3>Our Demo Stack</h3>
+            <p class="body-sm">Three services defined in <span class="mono">docker-compose.yml</span>:</p>
+            <ul class="bullet-list" style="margin-top: 16px;">
+              <li style="margin-bottom: 8px;"><strong>web</strong> — Nginx serving the frontend and proxying API requests</li>
+              <li style="margin-bottom: 8px;"><strong>api</strong> — Node.js REST API handling business logic</li>
+              <li style="margin-bottom: 8px;"><strong>db</strong> — PostgreSQL database with a persistent volume</li>
+            </ul>
+            <p class="body-sm" style="margin-top: 20px;"><strong>Key features:</strong></p>
+            <ul class="bullet-list" style="margin-top: 10px;">
+              <li style="margin-bottom: 6px;">Services communicate over a shared Docker network</li>
+              <li style="margin-bottom: 6px;">Database depends on API starting first (dependency ordering)</li>
+              <li style="margin-bottom: 6px;">Data persists across container restarts via named volumes</li>
+            </ul>
+          </div>
+          <div class="split-side">
+            <div style="border: 1.5px solid var(--ink); padding: 24px; background: var(--paper-2); border-radius: 4px; align-self: center;">
+              <p class="mono" style="font-size: 16px; color: var(--body-ink); line-height: 1.6;">
+                <span style="color: var(--ink);"># One command</span><br>
+                $ docker compose up<br><br>
+                <span style="color: var(--ink);"># Starts all 3 containers</span><br>
+                ✓ web running<br>
+                ✓ api running<br>
+                ✓ db running<br><br>
+                <span style="color: var(--ink);"># Visit</span><br>
+                http://localhost:8080
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rule bottom"></div>
+      <div class="foot">
+        <span class="foot-team"><span>Shivansh Patel (24001245)</span><span>·</span><span>Rishi Kachhadia (24000713)</span><span>·</span><span>Priyanshi Joshi (24000830)</span></span>
+        <span>B.Tech CSE - TY<span style="opacity:0.5; margin:0 10px;">·</span>Page <b>10</b></span>
+      </div>
+    </section>
+
+    <!-- ═══ SLIDE 11: REAL-WORLD USE CASES (BOXED) ═══ -->
+    <section class="slide">
+      <div class="head"><span>CS330</span><span class="sec">10 · Real-World Use Cases</span><span>11</span></div>
+      <div class="rule top"></div>
+      <div class="layout">
+        <h2>Real-world <em>use cases</em>.</h2>
+        <p class="lede" style="margin-top: 25px; max-width: 70ch;">Where containerization shines in modern software engineering.</p>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; margin-top: 40px;">
+          <div style="background: var(--paper-2); padding: 40px 45px; border-radius: 6px;">
+            <h3 style="margin-bottom: 16px; font-size: 36px;">Microservices Architecture</h3>
+            <p class="body-sm" style="font-size: 24px; line-height: 1.5;">Decompose monolithic applications into independent services that scale individually and communicate via APIs.</p>
+            <p class="body-sm" style="font-size: 22px; line-height: 1.5; opacity: 0.75; font-style: italic; margin-top: 15px;">Example: Decoupling authentication from inventory management.</p>
+          </div>
+          <div style="background: var(--paper-2); padding: 40px 45px; border-radius: 6px;">
+            <h3 style="margin-bottom: 16px; font-size: 36px;">CI/CD Pipelines</h3>
+            <p class="body-sm" style="font-size: 24px; line-height: 1.5;">Provide identical environments for building, testing, and production deployment, eliminating configuration drift completely.</p>
+            <p class="body-sm" style="font-size: 22px; line-height: 1.5; opacity: 0.75; font-style: italic; margin-top: 15px;">Example: Automated GitHub Actions runners using Docker.</p>
+          </div>
+          <div style="background: var(--paper-2); padding: 40px 45px; border-radius: 6px;">
+            <h3 style="margin-bottom: 16px; font-size: 36px;">Environment Consistency</h3>
+            <p class="body-sm" style="font-size: 24px; line-height: 1.5;">Solve "it works on my machine" by encapsulating runtimes and dependencies in version-controlled declarative files.</p>
+            <p class="body-sm" style="font-size: 22px; line-height: 1.5; opacity: 0.75; font-style: italic; margin-top: 15px;">Example: A new dev instantly spinning up a local replica stack.</p>
+          </div>
+          <div style="background: var(--paper-2); padding: 40px 45px; border-radius: 6px;">
+            <h3 style="margin-bottom: 16px; font-size: 36px;">Legacy App Modernization</h3>
+            <p class="body-sm" style="font-size: 24px; line-height: 1.5;">Pack legacy enterprise apps with older dependencies into containers to host them on the modern cloud without rewriting.</p>
+            <p class="body-sm" style="font-size: 22px; line-height: 1.5; opacity: 0.75; font-style: italic; margin-top: 15px;">Example: Containerizing legacy Java software for GCP/AWS.</p>
+          </div>
+        </div>
+      </div>
+      <div class="rule bottom"></div>
+      <div class="foot">
+        <span class="foot-team"><span>Shivansh Patel (24001245)</span><span>·</span><span>Rishi Kachhadia (24000713)</span><span>·</span><span>Priyanshi Joshi (24000830)</span></span>
+        <span>B.Tech CSE - TY<span style="opacity:0.5; margin:0 10px;">·</span>Page <b>11</b></span>
+      </div>
+    </section>
+
+    <!-- ═══ SLIDE 12: LIVE DEMO WALKTHROUGH ═══ -->
+    <section class="slide">
+      <div class="head"><span>CS330</span><span class="sec">11 · Live Demo Walkthrough</span><span>12</span></div>
+      <div class="rule top"></div>
+      <div class="layout">
+        <h2>Live demo <em>walkthrough</em>.</h2>
+        <p class="lede" style="margin-top: 30px; max-width: 70ch;">We'll demonstrate Docker's key capabilities with our three-container stack.</p>
+        <div style="margin-top: 50px;">
+          <div style="display: grid; grid-template-columns: auto 1fr; gap: 40px; align-items: start;">
+            <div style="width: 80px; height: 80px; border: 2px solid var(--ink); border-radius: 50%; 
+              display: flex; align-items: center; justify-content: center; background: var(--paper);">
+              <span style="font-family: 'Newsreader', serif; font-weight: 600; font-size: 36px; color: var(--ink);">01</span>
+            </div>
+            <div>
+              <h3>Start the stack</h3>
+              <p class="body-sm">Run <span class="mono" style="background: var(--paper-2); padding: 4px 10px; border-radius: 3px;">docker compose up --build -d</span> — builds images, starts all three containers in dependency order, and runs them in the background.</p>
+            </div>
+
+            <div style="width: 80px; height: 80px; border: 2px solid var(--ink); border-radius: 50%; 
+              display: flex; align-items: center; justify-content: center; background: var(--paper);">
+              <span style="font-family: 'Newsreader', serif; font-weight: 600; font-size: 36px; color: var(--ink);">02</span>
+            </div>
+            <div>
+              <h3>Verify running containers</h3>
+              <p class="body-sm">Run <span class="mono" style="background: var(--paper-2); padding: 4px 10px; border-radius: 3px;">docker compose ps</span> — shows all three services healthy and running. Visit <span class="mono">localhost:8080</span> to see the live app.</p>
+            </div>
+
+            <div style="width: 80px; height: 80px; border: 2px solid var(--ink); border-radius: 50%; 
+              display: flex; align-items: center; justify-content: center; background: var(--paper);">
+              <span style="font-family: 'Newsreader', serif; font-weight: 600; font-size: 36px; color: var(--ink);">03</span>
+            </div>
+            <div>
+              <h3>Demonstrate persistence</h3>
+              <p class="body-sm">Add data via the web UI, then run <span class="mono" style="background: var(--paper-2); padding: 4px 10px; border-radius: 3px;">docker compose down</span> (stops and removes containers). Restart with <span class="mono" style="background: var(--paper-2); padding: 4px 10px; border-radius: 3px;">docker compose up -d</span> — the data survives because it's stored in a named volume.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rule bottom"></div>
+      <div class="foot">
+        <span class="foot-team"><span>Shivansh Patel (24001245)</span><span>·</span><span>Rishi Kachhadia (24000713)</span><span>·</span><span>Priyanshi Joshi (24000830)</span></span>
+        <span>B.Tech CSE - TY<span style="opacity:0.5; margin:0 10px;">·</span>Page <b>12</b></span>
+      </div>
+    </section>
+
+    <!-- ═══ SLIDE 13: CONCLUSION ═══ -->
+    <section class="slide">
+      <div class="head"><span>CS330</span><span class="sec">12 · Conclusion</span><span>13</span></div>
+      <div class="rule top"></div>
+      <div class="layout">
+        <h2>Conclusion.</h2>
+        <div style="display: flex; gap: 80px; margin-top: 55px;">
+          <div style="flex: 1;">
+            <h3>Key Takeaways</h3>
+            <ul class="bullet-list" style="margin-top: 24px;">
+              <li>Docker solved the "works on my machine" problem by packaging applications with their complete runtime environment</li>
+              <li>Containers are lightweight, portable, and start in milliseconds — fundamentally changing how we deploy software</li>
+              <li>Docker Compose simplifies multi-service applications with declarative configuration</li>
+              <li>71% of developers use Docker globally — it's now a standard tool in the SE toolkit</li>
+            </ul>
+            <div style="margin-top: 48px; padding-top: 30px; border-top: 1px solid rgba(29, 99, 237, 0.3);">
+              <h3>Docker's Impact on Software Engineering</h3>
+              <p class="body-sm" style="margin-top: 16px;">Docker enabled the DevOps movement, cloud-native architecture, and microservices at scale. It transformed deployment from a manual, error-prone process into a reproducible, automated workflow.</p>
+            </div>
+          </div>
+          <div style="flex: 0 0 380px; align-self: center;">
+            <div style="border: 1.5px solid var(--ink); padding: 40px 42px; background: var(--paper-2); border-radius: 6px; display: flex; flex-direction: column; justify-content: center;">
+              <p style="font-family: 'Newsreader', serif; font-weight: 600; font-size: 52px; 
+                color: var(--ink); line-height: 1.1; margin: 0 0 24px 0;">Questions?</p>
+              <p class="body-sm">We're ready for your questions about Docker, our implementation, or the live demo.</p>
+              <p class="body-sm" style="margin-top: 30px; opacity: 0.8;"><em>Thank you for your attention.</em></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rule bottom"></div>
+      <div class="foot">
+        <span class="foot-team"><span>Shivansh Patel (24001245)</span><span>·</span><span>Rishi Kachhadia (24000713)</span><span>·</span><span>Priyanshi Joshi (24000830)</span></span>
+        <span>B.Tech CSE - TY<span style="opacity:0.5; margin:0 10px;">·</span>Page <b>13</b></span>
+      </div>
+    </section>
+
+  </div>
+</div>
+<div class="hint">← → to navigate</div>
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  var slides = [].slice.call(document.querySelectorAll('.slide'));
+  var i = 0;
+  
+  function fit() {
+    var v = document.querySelector('.deck-viewport');
+    var s = Math.min(v.clientWidth / 1920, v.clientHeight / 1080);
+    stage.style.transform = 'translate(' + (v.clientWidth - 1920 * s) / 2 + 'px,'
+      + (v.clientHeight - 1080 * s) / 2 + 'px) scale(' + s + ')';
+  }
+  
+  function go(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+  }
+  
+  window.addEventListener('resize', fit);
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(i + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(i - 1); }
+    if (e.key === 'Home') { e.preventDefault(); go(0); }
+    if (e.key === 'End') { e.preventDefault(); go(slides.length - 1); }
+  });
+  
+  fit();
+  go(0);
+})();
+</script>
+</body>
+</html>
